@@ -46,8 +46,16 @@ def log(level: str, ip: str, msg: str):
     """Format: [Timestamp] [Level] [IP] Message"""
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     ip_display = ip if ip else '-'
+    log_msg = f'[{timestamp}] [{level}] [{ip_display}] {msg}'
+    
+    # Colors
+    if level == 'WARN':
+        log_msg = '\033[93m' + log_msg + '\033[0m'
+    elif level == 'ERROR':
+        log_msg = '\033[91m' + log_msg + '\033[0m'
+    
     with log_lock:
-        print(f'[{timestamp}] [{level}] [{ip_display}] {msg}')
+        print(log_msg)
 
 # Load configuration from file
 def load_config(filepath):
