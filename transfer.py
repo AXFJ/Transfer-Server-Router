@@ -262,12 +262,11 @@ def handle_client(sock: socket.socket, addr):
                 active_connections -= 1
         sock.close()
 
-# Listen commands
 def console_input_listener(server_sock):
     global running
     while running:
         try:
-            cmd = input()
+            cmd = input('> ')
             if cmd.strip().lower() == 'stop':
                 log('INFO', '-', 'Stopping server...')
                 running = False
