@@ -4,7 +4,7 @@
 
 ## 简介
 
-Transfer Server Router 是一个极其轻量级的 Minecraft 服务器路由工具。它在玩家一旦连接到服务器时发送转移数据包，将玩家快速重定向到指定的目标服务器。该工具可用于给服务器进行入口分流或在**虚拟局域网下强制玩家使用公网IP（请参考我的另一个仓库 `Radmin-VPN-Minecraft-Server-Force-Join-with-Public-IP`）**的场景。
+Transfer Server Router 是一个极其轻量级的 Minecraft 服务器路由工具。它在玩家一旦连接到服务器时发送转移数据包（同等于原版 `/transfer` 命令），将玩家快速重定向到指定的目标服务器。该工具可用于给服务器进行入口分流或在**虚拟局域网下强制玩家使用公网IP（请参考我的另一个仓库 `Radmin-VPN-Minecraft-Server-Force-Join-with-Public-IP`）**的场景。
 
 **目前稳定协议支持**：Minecraft 1.21.11（协议版本 774），可配置兼容其他版本。
 

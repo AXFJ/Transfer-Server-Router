@@ -4,7 +4,7 @@
 
 ## Introduction
 
-Transfer Server Router is an extremely lightweight Minecraft server routing tool. It sends a transfer packet to the player as soon as they connect, quickly redirecting them to the specified target server. This tool can be used for entrance load balancing or for **forcing players to use a public IP under a virtual LAN** (see my other repository: `Radmin-VPN-Minecraft-Server-Force-Join-with-Public-IP`).
+Transfer Server Router is an extremely lightweight Minecraft server routing tool. It sends a transfer packet as soon as a player connects to the server (equivalent to the vanilla `/transfer` command), quickly redirecting the player to the specified target server. This tool can be used for routing incoming connections at the server entry point, or in scenarios where **players are forced to use a public IP under a virtual LAN (please refer to my other repository `Radmin-VPN-Minecraft-Server-Force-Join-with-Public-IP`)**.
 
 **Currently stable protocol support**: Minecraft 1.21.11 (protocol version 774), configurable for compatibility with other versions.
 
