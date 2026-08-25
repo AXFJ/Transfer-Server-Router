@@ -43,31 +43,23 @@ On first startup, the program will automatically generate a `tsr_server.properti
 | `rate-per-ip` | float | `1.0` | Allowed requests per second per IP |
 | `timeout-per-conn` | integer | `15` | Connection timeout in seconds |
 
----
-
-## Requirements
-
-- **Python 3.8+** (developed with Python 3.11.4)
+And some SLP options
 
 ---
 
 ## Quick Start
 
-### 1. Prepare the script
-
-Save `transfer.py` to any directory.
-
-### 2. Start the service
+### 1. Compile the script
 
 In the terminal, run:
 
 ```bash
-python transfer.py
+cargo build
 ```
 
 On first startup, the default configuration file `tsr_server.properties` will be created automatically, and the service will start listening according to the settings.
 
-### 3. Stop the service
+### 2. Stop the service
 
 Type `stop` in the running console and press Enter.
 
@@ -81,4 +73,4 @@ Apache 2.0
 
 ## TODOs
 
-Rewrite in Rust (maybe)
+[] Improve DoS protection
