@@ -70,7 +70,7 @@ fn console_input_listener(listener: Arc<TcpListener>, running: Arc<AtomicBool>) 
 }
 
 fn main() {
-    println!("Transfer Server Router v1.0 by AXFJ");
+    println!("Transfer Server Router v1.2 by AXFJ");
     println!("See https://github.com/AXFJ/Transfer-Server-Router.");
 
     // Load configuration (global immutable after load)
