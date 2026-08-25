@@ -2,6 +2,8 @@
 
 [中文](README_zh.md) | **English**
 
+> Now rewritten in rust!
+
 ## Introduction
 
 Transfer Server Router is an extremely lightweight Minecraft server routing tool. It sends a transfer packet as soon as a player connects to the server (equivalent to the vanilla `/transfer` command), quickly redirecting the player to the specified target server. This tool can be used for routing incoming connections at the server entry point, or in scenarios where **players are forced to use a public IP under a virtual LAN (please refer to my other repository `Radmin-VPN-Minecraft-Server-Force-Join-with-Public-IP`)**.
