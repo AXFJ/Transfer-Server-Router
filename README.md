@@ -21,7 +21,7 @@ Transfer Server Router is an extremely lightweight Minecraft server routing tool
 - Connection timeout setting to prevent zombie connections
 - Protocol version mismatch warnings (configurable)
 - Clean configuration file
-- Structured logging with timestamps, levels, IPs, and messages
+- Complete SLP support
 
 ---
 
