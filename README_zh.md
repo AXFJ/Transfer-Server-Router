@@ -43,11 +43,7 @@ Transfer Server Router 是一个极其轻量级的 Minecraft 服务器路由工�
 | `rate-per-ip` | 浮点数 | `1.0` | 每个 IP 每秒允许的请求数（|
 | `timeout-per-conn` | 整数 | `15` | 每个连接的超时时间（单位：秒）|
 
----
-
-## 运行要求
-
-- **Python 3.8+** 开发使用的版本是 Python 3.11.4
+以及一些 SLP 选项。
 
 ---
 
@@ -55,14 +51,10 @@ Transfer Server Router 是一个极其轻量级的 Minecraft 服务器路由工�
 
 ### 1. 准备脚本
 
-将 `transfer.py` 保存到任意目录。
-
-### 2. 启动服务
-
 在终端中执行：
 
 ```bash
-python transfer.py
+cargo build
 ```
 
 首次启动会自动创建默认配置文件 `tsr_server.properties`，并根据配置开始监听。
@@ -81,4 +73,4 @@ Apache 2.0
 
 ## TODOs
 
-使用 Rust 重写（可能吧）
+[] 增强 DoS 保护
