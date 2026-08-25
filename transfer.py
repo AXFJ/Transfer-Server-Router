@@ -1,29 +1,43 @@
-##########################
-#                        #
-# Transfer Server Router #
-#         v1.0           #
-#        by AXFJ         #
-#                        #
-##########################+
+#    Copyright 2026 AXFJ
+
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+
+#        http://www.apache.org/licenses/LICENSE-2.0
+
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
 
 import socket
 import threading
 import uuid
 import time
 import os
+import json
 from datetime import datetime
 
-# Defaut configs
+# Default configs
 DEFAULT_CONFIG = {
     'ip': '0.0.0.0',
     'port': 25565,
     'target-ip': 'example.com',
     'target-port': 25565,
-    'protocol': 774, # Recommended protocol version for 1.21.11
+    'protocol': 774,            # Recommended protocol version for 1.21.11
     'max-conn': 5,
     'max-conn-per-ip': 2,
     'rate-per-ip': 1.0,
     'timeout-per-conn': 15,
+
+    # SLP related configs (new)
+    'motd': 'A Minecraft Server',
+    'online-players': 0,
+    'max-players': 20,
+    'game-version': '1.21.11',
+    'player-list': '',          # Comma separated usernames
 }
 
 CONFIG = DEFAULT_CONFIG.copy()
@@ -166,7 +180,74 @@ class SocketReader:
         packet_id, offset = decode_varint(data, 0)
         return packet_id, data[offset:]
 
-# Client handler
+def handle_status(sock: socket.socket, reader: SocketReader, ip: str):
+    """
+    Handle status request flow:
+    1. Receive Status Request (packet id 0x00)
+    2. Send Status Response (packet id 0x00, JSON string)
+    3. Receive Ping Request (packet id 0x01)
+    4. Send Pong (packet id 0x01)
+    """
+    try:
+        # 1. Receive Status Request
+        pid, payload = reader.read_packet()
+        if pid != 0x00:
+            log('WARN', ip, f'Expected Status Request, got packet id {pid}, closing.')
+            return
+        
+        log('INFO', ip, 'Received Status Request')
+
+        # 2. Build players sample
+        sample = []
+        player_list_str = CONFIG.get('player-list', '')
+        if player_list_str:
+            names = [name.strip() for name in player_list_str.split(',') if name.strip()]
+            for name in names:
+                sample.append({
+                    'name': name,
+                    'id': '00000000-0000-0000-0000-000000000000'  # Fixed UUID, can be customized if needed
+                })
+
+        # 3. Build JSON response
+        response = {
+            'version': {
+                'name': CONFIG['game-version'],
+                'protocol': CONFIG['protocol']
+            },
+            'players': {
+                'max': CONFIG['max-players'],
+                'online': CONFIG['online-players'],
+                'sample': sample
+            },
+            'description': {
+                'text': CONFIG['motd']
+            }
+        }
+        json_str = json.dumps(response)
+
+        # 4. Send Status Response
+        payload = write_string(json_str)
+        send_packet(sock, 0x00, payload)
+        log('INFO', ip, 'Sent Status Response')
+
+        # 5. Receive Ping Request
+        pid, payload = reader.read_packet()
+        if pid != 0x01:
+            log('WARN', ip, f'Expected Ping Request, got packet id {pid}, closing.')
+            return
+        
+        log('INFO', ip, 'Received Ping Request')
+        if len(payload) != 8:
+            log('WARN', ip, f'Invalid ping payload length {len(payload)}, expected 8.')
+            return
+
+        # 6. Send Pong (echo the payload back)
+        send_packet(sock, 0x01, payload)
+        log('INFO', ip, 'Sent Pong')
+
+    except Exception as e:
+        log('ERROR', ip, f'Error handling status: {e}')
+
 def handle_client(sock: socket.socket, addr):
     global active_connections
     ip = addr[0]
@@ -224,38 +305,42 @@ def handle_client(sock: socket.socket, addr):
         next_state, _ = decode_varint(payload, offset)
 
         log('INFO', ip, f'Protocol version={protocol_ver}, next state={next_state}')
-        # Warn if protocol version does not match, but continue processing
-        if protocol_ver != CONFIG['protocol']:
-            log('WARN', ip, f'Client protocol version {protocol_ver} does not match configuration version {CONFIG["protocol"]}, continuing processing (may be compatible)')
-        if next_state != 2:
+
+        if next_state == 1:
+            # SLP (Server List Ping)
+            handle_status(sock, reader, ip)
             return
+        elif next_state == 2:
+            # Original login and transfer flow
+            # 2) Login Start
+            pid, payload = reader.read_packet()
+            log('INFO', ip, f'Received Login Start, packet_id={pid}')
+            if pid != 0x00:
+                return
 
-        # 2) Login Start
-        pid, payload = reader.read_packet()
-        log('INFO', ip, f'Received Login Start, packet_id={pid}')
-        if pid != 0x00:
+            offset = 0
+            username, offset = read_string(payload, offset)
+            if len(payload) - offset < 16:
+                log('ERROR', ip, 'An internal error occurred when decoding packets.')
+                return
+            player_uuid = uuid.UUID(bytes=payload[offset:offset + 16])
+
+            log('INFO', ip, f'Player "{username}" UUID={player_uuid}')
+
+            # 3) Login Success
+            login_payload = player_uuid.bytes + write_string(username) + encode_varint(0)
+            send_packet(sock, 0x02, login_payload)
+            log('INFO', ip, 'Sent Login Success')
+
+            # 4) Send Transfer
+            transfer_payload = write_string(CONFIG['target-ip']) + encode_varint(CONFIG['target-port'])
+            send_packet(sock, 0x0B, transfer_payload)
+            log('INFO', ip, f'Sent Transfer -> {CONFIG["target-ip"]}:{CONFIG["target-port"]}')
+
+            time.sleep(2)
+        else:
+            log('WARN', ip, f'Unsupported next state {next_state}, closing.')
             return
-
-        offset = 0
-        username, offset = read_string(payload, offset)
-        if len(payload) - offset < 16:
-            log('ERROR', ip, 'An internal error occurred when decoding packets.')
-            return
-        player_uuid = uuid.UUID(bytes=payload[offset:offset + 16])
-
-        log('INFO', ip, f'Player "{username}" UUID={player_uuid}')
-
-        # 3) Login Success
-        login_payload = player_uuid.bytes + write_string(username) + encode_varint(0)
-        send_packet(sock, 0x02, login_payload)
-        log('INFO', ip, 'Sent Login Success')
-
-        # 4) Send Transfer
-        transfer_payload = write_string(CONFIG['target-ip']) + encode_varint(CONFIG['target-port'])
-        send_packet(sock, 0x0B, transfer_payload)
-        log('INFO', ip, f'Sent Transfer -> {CONFIG["target-ip"]}:{CONFIG["target-port"]}')
-
-        time.sleep(2)
 
     except Exception as e:
         log('ERROR', ip, f'Error: {e}')
@@ -301,9 +386,10 @@ def main():
     server.bind((CONFIG['ip'], CONFIG['port']))
     server.listen(128)
 
-    log('INFO', '-', f'Listen on：{CONFIG["ip"]}:{CONFIG["port"]} -> {CONFIG["target-ip"]}:{CONFIG["target-port"]}')
-    log('INFO', '-', f'Protocol Version：{CONFIG["protocol"]}')
-    log('INFO', '-', f'Limitations：Total Concurrent={CONFIG["max-conn"]}, Per-IP Concurrent={CONFIG["max-conn-per-ip"]}, '
+    log('INFO', '-', f'Listen on: {CONFIG["ip"]}:{CONFIG["port"]} -> {CONFIG["target-ip"]}:{CONFIG["target-port"]}')
+    log('INFO', '-', f'Protocol Version: {CONFIG["protocol"]}')
+    log('INFO', '-', f'SLP: MOTD="{CONFIG["motd"]}", Players={CONFIG["online-players"]}/{CONFIG["max-players"]}, Version={CONFIG["game-version"]}')
+    log('INFO', '-', f'Limitations: Total Concurrent={CONFIG["max-conn"]}, Per-IP Concurrent={CONFIG["max-conn-per-ip"]}, '
                      f'Rate={CONFIG["rate-per-ip"]} req/s, Timeout={CONFIG["timeout-per-conn"]}s')
 
     input_thread = threading.Thread(target=console_input_listener, args=(server,), daemon=True)
@@ -329,4 +415,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    
